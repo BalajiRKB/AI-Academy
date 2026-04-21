@@ -20,16 +20,24 @@ async def webhook(request: Request):
         for message in messages:
             print("Webhook raw message:\n", json.dumps(message, indent=2))
 
-            # For self-chat testing: allow from_me messages
-            # In production with a different tester number, change this to:
+            # Skip own sent messages (from_me)
+            # NOTE: Currently disabled for self-chat testing.
+            # Enable this in production by uncommenting the line below:
             # if message.get("from_me"): continue
+
+            # Skip non-text messages
             msg_type = message.get("type")
             if msg_type != "text":
-                print(f"Skipping non-text message type: {msg_type}")
+                print(f"Skipping message because type is not text")
                 continue
 
             sender = message.get("chat_id") or message.get("from")
             text = message.get("text", {}).get("body", "").strip()
+
+            # Skip group messages
+            if sender and "@g.us" in sender:
+                print(f"Skipping group message from: {sender}")
+                continue
 
             print(f"Extracted sender: {sender}")
             print(f"Extracted text: {text}")
