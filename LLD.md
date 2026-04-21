@@ -92,7 +92,7 @@ Whapi is used as the WhatsApp API service for receiving incoming messages and se
 The FastAPI backend acts as the core application layer. It receives webhook events from Whapi, processes the incoming message, decides how to handle it, calls the LLM if needed, and sends the final reply back through Whapi.
 
 ### 7.4 LLM Service
-The LLM is responsible for generating natural language responses based only on the provided AI Academy course context.  
+The LLM is responsible for generating natural language responses based only on the provided AI Academy course context. The project uses **Groq (LLaMA 3.1 8B Instant)** as the LLM provider.
 
 ---
 
@@ -104,15 +104,16 @@ The complete flow is:
 2. Whapi receives the message and triggers the configured webhook.
 3. FastAPI receives the webhook event.
 4. The backend extracts the sender number and message text.
-5. If the message is `AI-Academy`, the backend sends the predefined welcome message.  
-6. If the message is a course-related question, the backend sends:
+5. Group messages and non-text messages are filtered out.
+6. If the message is `AI-Academy`, the backend sends the predefined welcome message.  
+7. If the message is a course-related question, the backend sends:
    - System prompt
    - Fixed AI Academy course context
    - User message  
    to the LLM.  
-7. The LLM generates a context-aware response.
-8. FastAPI sends this response back to the user through Whapi.
-9. The user receives the reply on WhatsApp.
+8. The LLM generates a context-aware response.
+9. FastAPI sends this response back to the user through Whapi.
+10. The user receives the reply on WhatsApp.
 
 ---
 
@@ -132,7 +133,8 @@ If the user asks something unrelated to AI Academy, the bot will respond politel
 Example fallback:
 > I can help you with AI Academy course details like modules, pricing, certificate, and enrollment.
 
-This keeps the bot focused on the assignment scope.  
+### 9.4 Group Message Filter
+Messages from WhatsApp group chats (identified by `@g.us` in the chat ID) are automatically skipped to prevent the bot from responding in groups.
 
 ---
 
@@ -163,6 +165,7 @@ Purpose:
 Expected responsibilities:
 - Parse webhook payload
 - Validate incoming message
+- Filter group messages and non-text types
 - Detect entry message
 - Route normal queries to LLM
 - Return success response to Whapi
@@ -194,42 +197,43 @@ Responsible for receiving and parsing incoming WhatsApp events.
 
 ### 12.2 Message Processor
 Responsible for:
-- identifying whether the message is the entry code
-- deciding whether to send the fixed welcome reply or call the LLM
-- handling unsupported or empty messages
+- Identifying whether the message is the entry code
+- Filtering group messages and non-text types
+- Deciding whether to send the fixed welcome reply or call the LLM
+- Handling unsupported or empty messages
 
-### 12.3 LLM Service
+### 12.3 LLM Response Service (`llm_response.py`)
 Responsible for:
-- building the prompt
-- attaching course context
-- sending the request to the selected LLM
-- returning the generated text response
+- Building the prompt
+- Attaching course context
+- Sending the request to Groq LLM
+- Returning the generated text response
 
 ### 12.4 Whapi Service
 Responsible for:
-- sending outbound WhatsApp replies
-- handling API token authentication
-- calling the Whapi send message endpoint
+- Sending outbound WhatsApp replies
+- Handling API token authentication
+- Calling the Whapi send message endpoint
 
 ### 12.5 Config Module
 Responsible for:
-- loading environment variables
-- storing API keys and tokens securely
-- separating configuration from code
+- Loading environment variables
+- Storing API keys and tokens securely
+- Separating configuration from code
 
 ---
 
-## 13. Proposed Project Structure
+## 13. Project Structure
 
 ```bash
-project/
+AI-Academy/
 │
 ├── app/
 │   ├── main.py
 │   ├── routes/
 │   │   └── webhook.py
 │   ├── services/
-│   │   ├── llm_service.py
+│   │   ├── llm_response.py
 │   │   └── whapi_service.py
 │   ├── core/
 │   │   └── config.py
@@ -252,7 +256,7 @@ The chatbot should handle basic errors gracefully:
 
 1. If the incoming payload is invalid, the webhook should return a safe error response.
 2. If the LLM call fails, the bot should return a polite fallback message such as:
-   > Sorry, I’m having trouble answering right now. Please try again in a moment.
+   > Sorry, I'm having trouble answering right now. Please try again in a moment.
 3. If Whapi sending fails, the error should be logged for debugging.
 4. If the message is empty or unsupported, the bot should avoid unnecessary replies.
 
@@ -278,10 +282,13 @@ To reduce the risk of bans, I will follow these practices:
 4. **Inbound-only interaction model**  
    The bot will work as a reply-based chatbot, not as a campaign or broadcast system. This makes the usage pattern safer.
 
-5. **Low-volume testing**  
+5. **Group message filtering**  
+   The bot automatically skips all messages from WhatsApp groups (`@g.us`), preventing unintended replies in group chats which can trigger spam detection.
+
+6. **Low-volume testing**  
    Since this is only an assignment demo, the usage volume will remain very low during development and testing.  
 
-6. **No multi-user rollout during assignment**  
+7. **No multi-user rollout during assignment**  
    I will not distribute the bot publicly or test it with many different numbers during this task round.
 
 These practices align with the warning mentioned in the task document and help keep testing controlled and safe.  
