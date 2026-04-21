@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 httpx
-google-genai
+groq
 pydantic-settings
 python-dotenv
