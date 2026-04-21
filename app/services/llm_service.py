@@ -1,20 +1,17 @@
-import anthropic
+import google.generativeai as genai
 from app.core.config import settings
 from app.prompts.course_context import SYSTEM_PROMPT
 
-client = anthropic.Anthropic(api_key=settings.LLM_API_KEY)
+genai.configure(api_key=settings.LLM_API_KEY)
 
 async def get_llm_response(user_message: str) -> str:
     try:
-        message = client.messages.create(
-            model=settings.LLM_MODEL,
-            max_tokens=512,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": user_message}
-            ]
+        model = genai.GenerativeModel(
+            model_name=settings.LLM_MODEL,
+            system_instruction=SYSTEM_PROMPT
         )
-        return message.content[0].text
+        response = model.generate_content(user_message)
+        return response.text
     except Exception as e:
         print(f"LLM error: {e}")
         return "Sorry, I'm having trouble answering right now. Please try again in a moment."

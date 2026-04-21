@@ -1,5 +1,6 @@
 fastapi
 uvicorn
 httpx
-anthropicpydantic-settings
+google-generativeai
+pydantic-settings
 python-dotenv
