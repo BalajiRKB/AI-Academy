@@ -20,10 +20,10 @@ async def webhook(request: Request):
         for message in messages:
             print("Webhook raw message:\n", json.dumps(message, indent=2))
 
-            # Skip own sent messages (from_me)
-            # NOTE: Currently disabled for self-chat testing.
-            # Enable this in production by uncommenting the line below:
-            # if message.get("from_me"): continue
+            # Skip own sent messages to prevent self-loop in production
+            if message.get("from_me"):
+                print("Skipping message because from_me is true")
+                continue
 
             # Skip non-text messages
             msg_type = message.get("type")
@@ -46,8 +46,8 @@ async def webhook(request: Request):
                 print("Skipping: sender or text is empty")
                 continue
 
-            # Entry point check
-            if text == ENTRY_CODE:
+            # Entry point check (case-insensitive to handle autocorrect)
+            if text.lower() == ENTRY_CODE.lower():
                 print(f">>> Sending WELCOME message to {sender}")
                 await send_message(sender, WELCOME_MESSAGE)
             else:
